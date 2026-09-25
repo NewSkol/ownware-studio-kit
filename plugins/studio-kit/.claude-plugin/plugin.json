@@ -1,0 +1,11 @@
+{
+  "name": "studio-kit",
+  "version": "0.1.0",
+  "description": "How Claude works on an Ownware Studio server: project orientation, handoff notes, auto-save to GitHub, secret scanning, teach-me mode.",
+  "author": {
+    "name": "Ownware Studio"
+  },
+  "homepage": "https://dmitrisdoor.com/studio",
+  "repository": "https://github.com/NewSkol/ownware-studio-kit",
+  "license": "MIT"
+}
