@@ -23,9 +23,11 @@ command -v claude >/dev/null || fail "Claude Code is not installed"
 
 # Third-party plugins, installed from their authors' own marketplaces (not copied).
 # Format: marketplace-source|plugin@marketplace-name
+# Full HTTPS addresses on purpose: with "owner/repo" Claude Code may clone over SSH, which fails
+# on a new server that has no GitHub SSH key.
 THIRD_PARTY="
-kenryu42/cc-safety-net|cc-safety-net@cc-safety-net-dev
-anthropics/claude-plugins-official|hookify@claude-plugins-official
+https://github.com/kenryu42/cc-safety-net.git|cc-safety-net@cc-safety-net-dev
+https://github.com/anthropics/claude-plugins-official.git|hookify@claude-plugins-official
 "
 
 log "Ownware Studio kit $KIT_VERSION$( [ "$DRY_RUN" = 1 ] && echo ' (dry run)')"

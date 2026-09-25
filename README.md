@@ -17,15 +17,18 @@ server. It is a Claude Code plugin marketplace: everything here is plain text yo
 
 ## Install or update
 
-On a Studio server this happens automatically, weekly. By hand, as your normal user:
+On a Studio server this happens automatically, weekly, from **signed releases only**: the
+server checks that a release tag (`vX.Y.Z`) carries the Ownware Studio signature before using
+it. The checking code and the trusted signature list live on the server, not in this repo, so
+changing this repo cannot change what servers trust. Every update, refusal or failure adds a line
+to `~/WHAT-CHANGED.md`.
 
 ```sh
-bash install.sh            # install or update
+bash install.sh            # install the checked-out kit (what the updater runs)
 bash install.sh --dry-run  # show what would change
 bash tests/check-kit.sh    # prove it works
+bash release.sh            # (maintainer) sign and publish the version in plugin.json
 ```
-
-Every update adds a line to `~/WHAT-CHANGED.md`.
 
 ## Licence
 

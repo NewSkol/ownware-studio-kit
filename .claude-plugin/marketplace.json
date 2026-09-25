@@ -11,7 +11,7 @@
       "name": "studio-kit",
       "source": "./plugins/studio-kit",
       "description": "How Claude works on your server: project orientation, handoff notes, auto-save to GitHub, secret scanning, teach-me mode.",
-      "version": "0.1.1"
+      "version": "0.2.0"
     }
   ]
 }
