@@ -16,6 +16,12 @@ claude plugin validate "$KIT_DIR" >/dev/null 2>&1 || fail "marketplace does not 
 claude plugin validate "$KIT_DIR/plugins/studio-kit" >/dev/null 2>&1 || fail "plugin does not validate"
 ok "claude plugin validate"
 
+echo "== installed version"
+want="$(python3 -c "import json;print(json.load(open('$KIT_DIR/plugins/studio-kit/.claude-plugin/plugin.json'))['version'])")"
+got="$(python3 -c "import json,os;d=json.load(open(os.path.expanduser('~/.claude/plugins/installed_plugins.json')));print(d.get('plugins',d)['studio-kit@ownware-studio'][0]['version'])")"
+[ "$got" = "$want" ] || fail "installed studio-kit $got, kit says $want"
+ok "installed studio-kit is $got"
+
 echo "== installed"
 list="$(claude plugin list 2>/dev/null)"
 for p in studio-kit@ownware-studio cc-safety-net@cc-safety-net-dev hookify@claude-plugins-official; do
@@ -50,6 +56,10 @@ ok "blocks when code is newer than the notes"
 echo "## 2026-01-02 — more" >> "$A/SESSIONS.md"; echo "x" >> "$A/STATE.md"; git -C "$A" commit -qam handoff
 payload "$A" | bash "$S/handoff-gate.sh" | grep -q block && fail "blocked although notes are fresh"
 ok "passes when notes are fresh"
+echo "console.log(2)" >> "$A/app.js"; git -C "$A" commit -qam "more code"; echo "y" >> "$A/STATE.md"
+payload "$A" | bash "$S/handoff-gate.sh" | grep -q block && fail "blocked although the notes were just edited"
+ok "passes when the notes are edited but not yet saved"
+git -C "$A" commit -qam "notes"
 
 echo "== auto-save to GitHub (a local stand-in)"
 git init -q --bare -b main /tmp/kit-test-remote.git
@@ -65,6 +75,14 @@ out="$(payload "$B" | bash "$S/git-autosync.sh" push)"
 echo "$out" | grep -q "look like secrets" || fail "a new .env file was not refused"
 git -C /tmp/kit-test-remote.git show --name-only --format= HEAD | grep -q '\.env' && fail ".env reached the remote"
 ok "refuses to push a new .env file"
+rm -f "$B/.env"
+printf 'const key = "AKIA%s";\n' "ABCDEFGHIJKLMNOP" > "$B/config.js"
+before="$(git -C /tmp/kit-test-remote.git rev-parse HEAD)"
+out="$(payload "$B" | bash "$S/git-autosync.sh" push)"
+echo "$out" | grep -q "written inside" || fail "a key inside config.js was not refused: $out"
+[ "$(git -C /tmp/kit-test-remote.git rev-parse HEAD)" = "$before" ] || fail "config.js with a key reached the remote"
+ok "refuses to push a key written inside a code file"
+rm -f "$B/config.js"
 
 echo "== secret scanner"
 rm -f "$B/.env"; printf 'key = "AKIA%s"\n' "ABCDEFGHIJKLMNOP" > "$B/config.js"; git -C "$B" add config.js

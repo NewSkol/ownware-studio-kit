@@ -41,6 +41,7 @@ elif [ -f "$stamp" ] && [ "$(sha256sum "$target" | awk '{print $1}')" = "$(cat "
 elif [ "$(sha256sum "$target" | awk '{print $1}')" != "$new_sum" ]; then
   log "your ~/.claude/CLAUDE.md has your own edits; the kit's version is saved as CLAUDE.md.kit-new"
   run cp "$KIT_DIR/user/CLAUDE.md" "$HOME/.claude/CLAUDE.md.kit-new" || fail "rules file copy"
+  NOTE_RULES=1
 fi
 [ "$DRY_RUN" = 1 ] || { [ -f "$target" ] && [ "$(sha256sum "$target" | awk '{print $1}')" = "$new_sum" ] && echo "$new_sum" > "$stamp"; }
 
@@ -51,7 +52,7 @@ else
   run claude plugin marketplace add "$KIT_DIR" >/dev/null || fail "add kit marketplace"
 fi
 if claude plugin list 2>/dev/null | grep -q "studio-kit@ownware-studio"; then
-  run claude plugin update studio-kit@ownware-studio >/dev/null 2>&1 || true
+  run claude plugin update studio-kit@ownware-studio >/dev/null 2>&1 || log "plugin update reported a problem; checking the installed version next"
 else
   run claude plugin install -y studio-kit@ownware-studio >/dev/null || fail "install studio-kit"
 fi
@@ -74,11 +75,22 @@ if [ "$DRY_RUN" = 0 ]; then
   for p in studio-kit@ownware-studio cc-safety-net@cc-safety-net-dev hookify@claude-plugins-official; do
     echo "$installed" | grep -q "$p" || fail "$p is not installed after install"
   done
+  got="$(python3 -c "import json,os
+d=json.load(open(os.path.expanduser('~/.claude/plugins/installed_plugins.json')))
+print(d.get('plugins',d)['studio-kit@ownware-studio'][0].get('version',''))" 2>/dev/null)"
+  if [ "$got" != "$KIT_VERSION" ]; then
+    [ -f "$CHANGES" ] || printf '# What changed on my server\n\nNewest at the bottom.\n\n' > "$CHANGES"
+    echo "- $(date +%F): kit update FAILED: installed $got, expected $KIT_VERSION." >> "$CHANGES"
+    fail "studio-kit is $got after install, expected $KIT_VERSION"
+  fi
   prev="$(cat "$HOME/.claude/.kit-version" 2>/dev/null || echo none)"
   if [ "$prev" != "$KIT_VERSION" ]; then
     [ -f "$CHANGES" ] || printf '# What changed on my server\n\nNewest at the bottom.\n\n' > "$CHANGES"
     echo "- $(date +%F): Studio kit $prev -> $KIT_VERSION." >> "$CHANGES"
     echo "$KIT_VERSION" > "$HOME/.claude/.kit-version"
+  fi
+  if [ "${NOTE_RULES:-0}" = 1 ] && ! grep -q "CLAUDE.md.kit-new ($KIT_VERSION)" "$CHANGES" 2>/dev/null; then
+    echo "- $(date +%F): new rules in ~/.claude/CLAUDE.md.kit-new ($KIT_VERSION). Yours were kept because you edited them; ask Claude to merge the two." >> "$CHANGES"
   fi
 fi
 log "done. Kit $KIT_VERSION installed."

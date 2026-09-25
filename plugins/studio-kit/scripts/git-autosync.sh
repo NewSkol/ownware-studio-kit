@@ -51,6 +51,8 @@ $under_root || exit 0
 # --- guard: single instance per repo ---------------------------------------
 if command -v sha1sum >/dev/null 2>&1; then HASH=sha1sum; else HASH=shasum; fi
 LOCK="/tmp/.autosync-$(printf '%s' "$REPO" | $HASH | cut -c1-12).lock"
+# a run killed by the hook time limit leaves its lock behind; older than 10 minutes = abandoned
+[ -d "$LOCK" ] && find "$LOCK" -maxdepth 0 -mmin +10 -exec rmdir {} \; 2>/dev/null
 if ! mkdir "$LOCK" 2>/dev/null; then exit 0; fi
 trap 'rmdir "$LOCK" 2>/dev/null' EXIT
 
@@ -125,6 +127,20 @@ push)
   # --- commit + push -------------------------------------------------------
   git -C "$REPO" add -A >/dev/null 2>&1
   git -C "$REPO" diff --cached --quiet && exit 0   # everything was ignored
+
+  # --- guard: secrets inside files (a key pasted into config.js, not just .env files) ---------
+  SCANNER="$(dirname "$0")/secret-scanner.py"
+  if [ -f "$SCANNER" ]; then
+    scan_out=$(cd "$REPO" && printf '{"tool_input":{"command":"git commit"},"cwd":"%s"}' "$REPO" \
+      | python3 "$SCANNER" 2>&1 >/dev/null); scan_rc=$?
+    if [ "$scan_rc" = 2 ]; then
+      git -C "$REPO" reset -q >/dev/null 2>&1
+      where=$(printf '%s' "$scan_out" | grep -E '^ +File: ' | sed 's/^ *File: //' | head -3 | paste -sd', ' -)
+      log "$NAME: BLOCKED, secret inside: $where"
+      say "{\"systemMessage\":\"⛔︎ $NAME: auto-save stopped: a password or key seems to be written inside $where. Nothing was saved to GitHub. Move it to the .env file, then save again.\"}"
+      exit 0
+    fi
+  fi
 
   n=$(git -C "$REPO" diff --cached --name-only | wc -l | tr -d ' ')
   files=$(git -C "$REPO" diff --cached --name-only | head -3 | xargs -n1 basename 2>/dev/null | paste -sd', ' -)

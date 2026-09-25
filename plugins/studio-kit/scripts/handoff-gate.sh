@@ -30,6 +30,8 @@ while IFS= read -r line; do
   if is_handoff "$p"; then case "$p" in STATE.md|SESSIONS.md) dirty_handoff=true;; esac; else changed+=("$p"); fi
 done < <(git status --porcelain --untracked-files=all 2>/dev/null)
 if [ ${#changed[@]} -gt 0 ] && ! $dirty_handoff; then stale=true; fi
+# notes edited but not yet committed count as up to date (auto-save commits them at Stop)
+$dirty_handoff && { rm -f "$COUNTER" 2>/dev/null; exit 0; }
 # 2. committed history: last code commit must be reachable from last handoff commit
 if ! $stale && [ ${#changed[@]} -eq 0 ]; then
   last_code=$(git log -1 --format=%H -- . ':(exclude)STATE.md' ':(exclude)SESSIONS.md' ':(exclude)docs/prompts' ':(exclude).claude' 2>/dev/null)
