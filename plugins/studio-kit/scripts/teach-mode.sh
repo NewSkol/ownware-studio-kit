@@ -13,8 +13,28 @@ if [ ! -f "$LOG" ]; then
   cat > "$LOG" 2>/dev/null <<'EOF'
 # What I have learned
 
-One line per lesson, newest at the bottom. Claude adds to this; you can read it any time.
-Format: YYYY-MM-DD — lesson name — the one-sentence idea.
+The AI adds one lesson per reply while teach-me mode is on, tied to the work we just did.
+Each lesson opens with an everyday comparison, then why the thing exists, then how it works.
+
+Stages: 🟡 taught once · 🟢 taught again from a different case and it stuck (never repeated).
+A 🟡 lesson comes back once, from a new situation, before it turns 🟢.
+
+## Areas
+
+| Area | Stage | Last touched |
+|---|---|---|
+| Files, folders and the terminal | 🔴 | |
+| Git: saving, history, undo | 🔴 | |
+| Secrets and keys | 🔴 | |
+| Servers, domains, deploys | 🔴 | |
+| Databases and who sees what | 🔴 | |
+| Tests and proof | 🔴 | |
+| Directing the AI (plans, specs, context) | 🔴 | |
+| Security basics | 🔴 | |
+| Money: subscriptions, API costs | 🔴 | |
+
+## Lessons (newest at the bottom)
+Format: YYYY-MM-DD — lesson name — the one-sentence idea — 🟡 or 🟢
 
 EOF
 fi
@@ -25,13 +45,15 @@ The user is learning to build software with AI. End every reply with exactly one
 open with an everyday analogy (not about computers), then say why the thing exists, then how it works,
 tied to the work just done. Plain words; explain any technical term. If nothing in the work fits, teach a
 basic that helps them direct you better (what a file, a server, git, a database or a test is).
-Never repeat a lesson already listed in ~/.claude/LEARNING.md. After the reply, add one line there:
-"YYYY-MM-DD — lesson name — the one-sentence idea."
+Stages in ~/.claude/LEARNING.md: never repeat a lesson marked 🟢 or with no mark. A lesson marked 🟡 may come
+back once, from a different situation; when it does, change its mark to 🟢. After the reply, add one line
+under Lessons: "YYYY-MM-DD — lesson name — the one-sentence idea — 🟡" and, if the file has an Areas table,
+update that area's row (stage and date).
 The user can switch this off by saying "/teach-me off".
 TXT
 if [ -s "$LOG" ]; then
   echo
-  echo "### Lessons already given (do not repeat)"
+  echo "### Lessons already given (🟢 or no mark: do not repeat; 🟡: only from a different situation)"
   grep -E '^[0-9]{4}-[0-9]{2}-[0-9]{2}' "$LOG" | tail -40 | sed 's/^/- /'
 fi
 exit 0

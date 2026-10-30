@@ -7,12 +7,12 @@ server. It is a Claude Code plugin marketplace: everything here is plain text yo
 
 | Piece | What it does for you |
 |---|---|
-| Rules file (`user/CLAUDE.md`) | How Claude works with you: a plan first, proof that things run, plain-English answers, asking before anything that cannot be undone. Installed as `~/.claude/CLAUDE.md`. If you edit yours, updates never overwrite it. |
+| Rules files (`user/CLAUDE.md`, `user/AGENTS.md`) | How Claude and Codex work with you, the same text for both: a plan first, proof that things run, plain-English answers, asking before anything that cannot be undone. Installed as `~/.claude/CLAUDE.md` and `~/.codex/AGENTS.md`. If you edit yours, updates never overwrite it: the new version lands beside it as `.kit-new`. |
 | Project notes | Every project keeps `STATE.md` (where it stands) and `SESSIONS.md` (what happened). Claude reads them at the start and must update them before it stops. |
 | Auto-save | Your work is committed and pushed to your GitHub at the end of each turn. New secret files (like `.env`) are refused. |
 | Secret scanner | Refuses a commit that contains a password or API key. |
 | Teach-me mode | On by default: each answer ends with one short lesson. Say `/teach-me off` to stop it. |
-| Skills | `/handoff` (update the notes), `/verify-against-code` (check a claim by running it), `/teach-me`. |
+| Skills (`skills/`) | In both tools: `handoff` (update the notes), `verify-against-code` (check a claim by running it), `write-spec` (interview, SPEC.md, numbered plans), `new-app` (start a project), `security-check` (before launch). Installed in `~/.agents/skills`, linked into `~/.claude/skills`. Claude also gets `/teach-me`, from the plugin. |
 | From other authors | [cc-safety-net](https://github.com/kenryu42/cc-safety-net) blocks destructive commands; [hookify](https://github.com/anthropics/claude-plugins-official) lets you write your own guardrails in plain English. Installed from their own sources. |
 
 ## Install or update
@@ -26,7 +26,8 @@ to `~/WHAT-CHANGED.md`.
 ```sh
 bash install.sh            # install the checked-out kit (what the updater runs)
 bash install.sh --dry-run  # show what would change
-bash tests/check-kit.sh    # prove it works
+bash tests/check-kit.sh    # prove it works on an installed server
+bash tests/test-install.sh # prove the rules and skills handling anywhere (throwaway home folders)
 bash release.sh            # (maintainer) sign and publish the version in plugin.json
 ```
 

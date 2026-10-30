@@ -30,6 +30,26 @@ for p in studio-kit@ownware-studio cc-safety-net@cc-safety-net-dev hookify@claud
 done
 cmp -s "$HOME/.claude/CLAUDE.md" "$KIT_DIR/user/CLAUDE.md" || fail "~/.claude/CLAUDE.md is not the kit's rules file"
 ok "rules file in place"
+cmp -s "$HOME/.codex/AGENTS.md" "$KIT_DIR/user/AGENTS.md" || fail "~/.codex/AGENTS.md is not the kit's rules file"
+ok "Codex rules file in place"
+[ "$(sed '/^## In Claude Code/,$d' "$KIT_DIR/user/CLAUDE.md")" = "$(sed '/^## In Codex/,$d' "$KIT_DIR/user/AGENTS.md")" ] || fail "the shared rules differ between CLAUDE.md and AGENTS.md"
+ok "both tools get the same shared rules"
+mv_="$(python3 -c "import json;print(json.load(open('$KIT_DIR/.claude-plugin/marketplace.json'))['plugins'][0]['version'])")"
+[ "$mv_" = "$want" ] || fail "marketplace.json says $mv_, plugin.json says $want"
+ok "marketplace and plugin agree on $want"
+
+echo "== skills"
+for s in handoff new-app security-check verify-against-code write-spec; do
+  [ "$(sed -n 's/^name: //p' "$HOME/.agents/skills/$s/SKILL.md")" = "$s" ] || fail "$s not in ~/.agents/skills"
+  [ "$(readlink -f "$HOME/.claude/skills/$s")" = "$(readlink -f "$HOME/.agents/skills/$s")" ] || fail "$s not linked into ~/.claude/skills"
+done
+ok "five skills in both tools"
+[ -f "$KIT_DIR/plugins/studio-kit/skills/teach-me/SKILL.md" ] || fail "teach-me left the plugin"
+[ ! -e "$KIT_DIR/plugins/studio-kit/skills/handoff" ] && [ ! -e "$KIT_DIR/plugins/studio-kit/skills/verify-against-code" ] || fail "old skills still in the plugin"
+ok "teach-me stays in the plugin, the others moved out"
+
+echo "== install.sh file handling"
+bash "$KIT_DIR/tests/test-install.sh" || fail "install checks"
 
 # Run the scripts from the installed copy, the way Claude Code runs them.
 ROOT_DIR="$(find "$HOME/.claude/plugins" -path '*studio-kit*' -name hooks.json -printf '%h\n' 2>/dev/null | grep -v "$KIT_DIR" | head -1)"
@@ -100,6 +120,19 @@ ok "on by default, learning log created"
 touch "$HOME/.claude/teach-me-off"
 bash "$S/teach-mode.sh" < /dev/null | grep -q . && fail "teach mode still talks when switched off"
 ok "silent when switched off"
+rm -f "$HOME/.claude/teach-me-off"
+L="$(mktemp -d)"
+out="$(HOME="$L" bash "$S/teach-mode.sh" < /dev/null)"
+grep -q "^## Areas" "$L/.claude/LEARNING.md" && grep -q "^Stages: 🟡" "$L/.claude/LEARNING.md" || { rm -rf "$L"; fail "new log has no areas or stages"; }
+echo "$out" | grep -q "marked 🟡" || { rm -rf "$L"; fail "instruction has no 🟡/🟢 stage"; }
+echo "$out" | grep -q "^- " && { rm -rf "$L"; fail "the log's format line was listed as a lesson"; }
+ok "new log has areas and stages; the instruction uses them"
+echo "2026-01-02 — what git is — saving points — 🟡" >> "$L/.claude/LEARNING.md"
+before="$(sha256sum "$L/.claude/LEARNING.md")"
+HOME="$L" bash "$S/teach-mode.sh" < /dev/null | grep -q "^- 2026-01-02 — what git is" || { rm -rf "$L"; fail "lesson line not listed"; }
+[ "$(sha256sum "$L/.claude/LEARNING.md")" = "$before" ] || { rm -rf "$L"; fail "existing log was changed"; }
+rm -rf "$L"
+ok "lesson lines are listed; an existing log is left alone"
 
 cleanup
 echo "KIT CHECKS PASSED ($PASS)"
